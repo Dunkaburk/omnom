@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"omnom-firebase","appId":"1:259689778340:android:6a39ee55516ef8c62e2a31","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"omnom-firebase","configurations":{"android":"1:259689778340:android:6a39ee55516ef8c62e2a31","ios":"1:259689778340:ios:5de10422912e3cb32e2a31"}}}}}}

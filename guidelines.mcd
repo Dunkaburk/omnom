@@ -1,0 +1,206 @@
+# Project: Culinary Passport - Shared Country Cooking Tracker
+
+## 1. Overview
+This project is a Flutter mobile application for iOS and Android designed for two users (a couple) to track countries from which they've cooked food. It will store data like country names, dish names, ratings, and comments. The backend will be Firebase (Cloud Firestore for database, Firebase Authentication for users).
+
+**Primary Goals:**
+-   Easy to use for two specific users with distinct contributions.
+-   Shared, real-time data synchronization between the two users' devices.
+-   Scalable and maintainable codebase.
+
+## 2. Core Technologies
+-   **Frontend:** Flutter (latest stable version)
+-   **Language:** Dart (with sound null safety enabled)
+-   **Backend:** Firebase
+    -   **Database:** Cloud Firestore
+    -   **Authentication:** Firebase Authentication (Email/Password for two pre-defined users)
+-   **State Management:** Riverpod (preferred for scalability and testability)
+-   **Routing:** GoRouter (for declarative, type-safe navigation)
+-   **Linting:** `flutter_lints` (enforce good practices from the start)
+
+## 3. Project Structure (Target)
+Strive for a feature-first or layer-first approach within the `lib/src/` directory. Example:
+
+lib/
+  main.dart
+  app.dart                 # Root widget, MaterialApp, theme, router setup
+  src/
+    #-- FEATURES --#
+    features/
+      auth/
+        application/       # Login logic
+        data/              # Firebase Auth repository
+        domain/            # Auth entities (e.g., User model)
+        presentation/      # Login screen widget, auth state provider
+      countries/
+        application/
+        data/              # Repositories, data sources (Firebase-specific logic)
+        domain/            # Models, entities, core business logic (independent of Firebase)
+        presentation/      # Widgets, screens, controllers/providers
+          widgets/         # Reusable widgets specific to this feature
+      dishes/              # (If dishes are tracked separately from countries)
+        application/
+        data/
+        domain/
+        presentation/
+          widgets/
+
+    #-- COMMON / SHARED --#
+    common_widgets/        # Truly global, reusable widgets (e.g., CustomButton, LoadingIndicator)
+    constants/             # App-wide constants (strings, API keys (use .env), colors if not in theme)
+    domain_models/         # Core domain models shared across features (if any)
+    routing/               # GoRouter configuration
+    services/              # Shared utility services
+    theme/                 # App theme data
+    utils/                 # Utility functions
+
+## 4. Coding Style & Conventions
+-   **Naming:**
+    -   Classes, Enums, Typedefs, Extensions: `PascalCase`
+    -   Variables, Functions, Methods, Parameters: `camelCase`
+    -   Files: `snake_case.dart`
+    -   Constants: `kCamelCase` or `ALL_CAPS_SNAKE_CASE` for true constants.
+-   **Readability:**
+    -   Prefer `final` for variables that are not reassigned.
+    -   Use `const` constructors and widgets wherever possible for performance.
+    -   Keep functions and methods short and focused (Single Responsibility Principle).
+    -   Add comments for complex logic or non-obvious decisions. Use `///` for Dartdoc.
+-   **Imports:**
+    -   Sort imports: Dart first, then packages, then project-relative.
+    -   Avoid relative imports that traverse upwards (`../../`). Use absolute `package:` imports.
+-   **Error Handling:**
+    -   Use `try-catch` blocks for operations that can fail (especially I/O like Firebase calls).
+    -   Provide user-friendly error messages or states.
+    -   Consider a simple Either/Result type for function returns that can fail.
+
+## 5. State Management (Riverpod)
+-   Utilize Riverpod for managing application state.
+-   Prefer `NotifierProvider` or `AsyncNotifierProvider` for managing mutable state and business logic.
+-   For authentication state, use a provider that exposes the current Firebase user (`User?`).
+-   Keep providers small and focused.
+-   Clearly separate UI (Widgets) from business logic (Notifiers/Providers).
+-   Widgets should `ref.watch` providers to rebuild on state changes and `ref.read` for one-time access or in callbacks.
+
+## 6. Firebase & Firestore
+
+### 6.1. Authentication (Firebase Authentication - Email/Password)
+-   **Strategy:** Two user accounts will be **pre-created directly in the Firebase Console** (e.g., `user1@ourculinarypassport.app`, `user2@ourculinarypassport.app`) with their respective passwords.
+-   **App UX:** The app will feature a very simple login screen. It will not have registration, password reset, or email verification flows. Users will directly input their pre-assigned credentials.
+    -   Consider a dropdown to select "User 1" or "User 2" which pre-fills the email, then a password field.
+-   **Auth State:** The app will listen to Firebase Auth state changes to determine if a user is logged in and navigate accordingly (e.g., to login screen or home screen).
+
+### 6.2. Data Modeling (Example - Countries Collection in Firestore)
+-   Store data associating contributions with the authenticated user's Firebase UID.
+    ```
+    countries/ (collection)
+      {countryId}/ (document)
+        name: "Japan" (String)
+        flagEmoji: "🇯🇵" (String, optional)
+        dishes: [ (Array of Maps - each map represents a dish cooked from this country)
+          {
+            dishId: "unique_dish_id" (String) // Auto-generated or UUID
+            dishName: "Sushi" (String)
+            cookedDate: Timestamp
+            cookedByUid: "firebase_auth_uid_of_cook" (String) // UID of the user who primarily cooked or added this entry
+            // Or consider `cookedByUids: ["uid1", "uid2"]` if cooked together
+
+            ratings: { // Map: Key is Firebase Auth UID, Value is rating details
+              "firebase_auth_uid_user1": {
+                rating: 4.5 (Number),
+                comment: "Delicious!",
+                photoUrl: "gs://bucket/path/to/image.jpg" (String, optional, if using Firebase Storage)
+              },
+              "firebase_auth_uid_user2": {
+                rating: 5 (Number),
+                comment: "Best sushi ever.",
+                photoUrl: "gs://bucket/path/to/other_image.jpg" (String, optional)
+              }
+            },
+            // Other fields: mainIngredients (List<String>), notes (String)
+          }
+        ],
+        // Denormalized/calculated fields for easier display (optional)
+        // lastCookedDate: Timestamp,
+        // userContributions: { "uid1": count, "uid2": count }
+    ```
+    *Note: Dishes could also be a top-level collection if queries like "all dishes rated 5 stars by User 1" are needed.*
+
+### 6.3. Repositories
+-   Abstract Firestore and Firebase Auth calls behind repository classes.
+    -   `AuthRepository`: `signIn(email, password)`, `signOut()`, `authStateChangesStream()`.
+    -   `CountryRepository`: `addCountryDish()`, `getCountriesStream()`, `updateDishRating(countryId, dishId, ratingDetails)`.
+
+### 6.4. Security Rules (Firestore)
+-   **CRITICAL:** Implement robust Firestore security rules.
+-   **Default:** Deny all access unless explicitly allowed.
+-   **Core Principle:** Allow access only to authenticated users. Specific UIDs can be hardcoded for extra restriction if necessary, or rely on general auth.
+    ```firestore.rules
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+
+        // Default deny all access to any path not explicitly matched
+        match /{document=**} {
+          allow read, write: if false;
+        }
+
+        // Countries collection
+        match /countries/{countryId} {
+          // Any authenticated user (one of the two) can read countries/dishes
+          allow read: if request.auth != null;
+
+          // Allow creating new country documents by any authenticated user
+          allow create: if request.auth != null;
+
+          // Allow updates (e.g., adding a dish, updating a rating)
+          // - User must be authenticated.
+          // - If modifying a specific user's rating, ensure it's their own rating.
+          //   (This requires careful rule writing based on request.resource.data and resource.data)
+          allow update: if request.auth != null &&
+                          // Example: only allow a user to write to their own rating sub-map
+                          (request.resource.data.dishes[<em>].ratings[request.auth.uid] != resource.data.dishes[</em>].ratings[request.auth.uid] ||
+                           /* other valid updates */);
+          // Deletion rules (be cautious, e.g., only allow if document creator or specific admin role)
+          // allow delete: if request.auth != null && resource.data.createdByUid == request.auth.uid;
+        }
+
+        // (If you have a separate 'users' collection for user profiles, define rules here)
+        // match /users/{userId} {
+        //   allow read: if request.auth != null;
+        //   allow write: if request.auth != null && request.auth.uid == userId;
+        // }
+      }
+    }
+    ```
+    *Security rules will need refinement based on the exact data structure and update patterns.*
+
+### 6.5. Error Handling for Firebase
+-   Wrap Firebase calls in `try-catch` and convert Firebase-specific exceptions into domain/application layer errors.
+
+### 6.6. Asynchronous Operations
+-   Use `async/await` consistently. Use `StreamBuilder` or `ref.watch` on `AsyncNotifierProvider` for real-time updates.
+
+## 7. UI/UX
+-   **Reusable Widgets:** Create custom reusable widgets.
+-   **Theming:** Define a consistent app theme.
+-   **Simplicity:** Focus on a clean and straightforward interface for the two users.
+
+## 8. Testing
+-   **Aim for:** Unit Tests, Widget Tests.
+
+## 9. Maintainability Focus
+-   SRP, DRY, Modularity, Configuration over Hardcoding, Documentation.
+
+## 10. Instructions for AI (Cursor)
+-   When generating code, adhere to the project structure and coding conventions outlined above.
+-   Authentication will be Firebase Email/Password for two pre-created users. Focus on a minimal login UI.
+-   Prioritize Riverpod for state management, including auth state.
+-   When creating Firebase interactions, ensure data is tagged with `request.auth.uid` where appropriate.
+-   Always consider Firestore security rules implications. Suggest rules that ensure only authenticated users can read/write, and users can only modify their own specific data portions (like their personal rating/comment).
+-   Suggest error handling patterns for asynchronous operations.
+-   If new features are added, ask for guidance on where they fit within the existing structure.
+-   Propose refactoring opportunities if code becomes overly complex or violates these guidelines.
+-   When creating widgets, aim for reusability and separation from business logic.
+
+---
+This document is a living guide. We can update it as the project evolves.
