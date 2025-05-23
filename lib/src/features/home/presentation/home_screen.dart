@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:omnom/src/features/countries/application/country_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the new provider
+    final cookedCountriesDataAsync = ref.watch(cookedCountriesDataProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Culinary Couple'),
@@ -20,22 +25,62 @@ class HomeScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            const Text(
-              '49 out of 195 Countries Explored!',
-              style: TextStyle(fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0), // Added padding for progress bar
-              child: ClipRRect( // Used ClipRRect for rounded corners
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: 49 / 195,
-                  minHeight: 20, // Increased height
-                  backgroundColor: Colors.grey[300],
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
-                ),
+            // Use AsyncValue.when to handle loading/error/data states
+            cookedCountriesDataAsync.when(
+              data: (data) {
+                final cookedCount = data.$1;
+                final totalCount = data.$2;
+                final progress = totalCount > 0 ? cookedCount / totalCount : 0.0;
+                return Column(
+                  children: [
+                    Text(
+                      '$cookedCount out of $totalCount Countries Explored!',
+                      style: const TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 20,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+              loading: () => Column(
+                children: [
+                  Text(
+                    'Loading progress...',
+                    style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 32.0),
+                    child: LinearProgressIndicator(
+                      minHeight: 20,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black54),
+                    ),
+                  ),
+                ],
+              ),
+              error: (err, stack) => Column(
+                children: [
+                  const Text(
+                    'Error loading progress',
+                    style: TextStyle(fontSize: 16, color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(err.toString(), style: const TextStyle(color: Colors.redAccent)),
+                ],
               ),
             ),
             const SizedBox(height: 32),

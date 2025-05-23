@@ -6,55 +6,59 @@ part of 'country_service.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$uniqueContinentsHash() => r'e46d5009e56a3f2f0b387040ee1f61a2a88ae540';
+String _$cookedCountriesCountHash() =>
+    r'9bc0c82c2e4149b3d790e33d88958e121944f916';
 
-/// See also [uniqueContinents].
-@ProviderFor(uniqueContinents)
-final uniqueContinentsProvider = AutoDisposeProvider<List<String>>.internal(
-  uniqueContinents,
-  name: r'uniqueContinentsProvider',
+/// See also [cookedCountriesCount].
+@ProviderFor(cookedCountriesCount)
+final cookedCountriesCountProvider = AutoDisposeStreamProvider<int>.internal(
+  cookedCountriesCount,
+  name: r'cookedCountriesCountProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$uniqueContinentsHash,
+      : _$cookedCountriesCountHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef UniqueContinentsRef = AutoDisposeProviderRef<List<String>>;
-String _$filteredCountriesHash() => r'fc0ef7e6c91d6bccf4597002576aefc8e7c1fc24';
+typedef CookedCountriesCountRef = AutoDisposeStreamProviderRef<int>;
+String _$cookedCountriesProgressHash() =>
+    r'3b62cd8f2b18cde268e55dde4c0b637d63c364f2';
 
-/// See also [filteredCountries].
-@ProviderFor(filteredCountries)
-final filteredCountriesProvider = AutoDisposeProvider<List<Country>>.internal(
-  filteredCountries,
-  name: r'filteredCountriesProvider',
+/// See also [cookedCountriesProgress].
+@ProviderFor(cookedCountriesProgress)
+final cookedCountriesProgressProvider =
+    AutoDisposeFutureProvider<double>.internal(
+  cookedCountriesProgress,
+  name: r'cookedCountriesProgressProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$filteredCountriesHash,
+      : _$cookedCountriesProgressHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef FilteredCountriesRef = AutoDisposeProviderRef<List<Country>>;
-String _$countriesListHash() => r'c8846ce0773049bd3f0432237f04626d6526900e';
+typedef CookedCountriesProgressRef = AutoDisposeFutureProviderRef<double>;
+String _$cookedCountriesDataHash() =>
+    r'59aa08024bf686427d57d512edce8a955ce55856';
 
-/// See also [CountriesList].
-@ProviderFor(CountriesList)
-final countriesListProvider =
-    AutoDisposeNotifierProvider<CountriesList, List<Country>>.internal(
-  CountriesList.new,
-  name: r'countriesListProvider',
+/// See also [CookedCountriesData].
+@ProviderFor(CookedCountriesData)
+final cookedCountriesDataProvider =
+    AutoDisposeAsyncNotifierProvider<CookedCountriesData, (int, int)>.internal(
+  CookedCountriesData.new,
+  name: r'cookedCountriesDataProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$countriesListHash,
+      : _$cookedCountriesDataHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
-typedef _$CountriesList = AutoDisposeNotifier<List<Country>>;
+typedef _$CookedCountriesData = AutoDisposeAsyncNotifier<(int, int)>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

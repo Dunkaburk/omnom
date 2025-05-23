@@ -16,7 +16,7 @@ class CountriesScreen extends ConsumerWidget {
     final List<String> uniqueContinentsList = ref.watch(uniqueContinentsProvider);
 
     final selectedContinentFilter = ref.watch(selectedContinentProvider);
-    final currentFilterType = ref.watch(countryFilterProvider);
+    final currentFilterType = ref.watch(countryFilterTypeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -52,7 +52,7 @@ class CountriesScreen extends ConsumerWidget {
               ],
               selected: {currentFilterType},
               onSelectionChanged: (Set<CountryFilterType> newSelection) {
-                ref.read(countryFilterProvider.notifier).state = newSelection.first;
+                ref.read(countryFilterTypeProvider.notifier).state = newSelection.first;
               },
             ),
           ),
