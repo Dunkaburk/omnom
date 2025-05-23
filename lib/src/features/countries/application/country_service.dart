@@ -1,17 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:omnom/src/features/countries/data/country_repository.dart'; // Import repository
 import 'package:omnom/src/features/countries/domain/country.dart';
+// TODO: Import Meal model and providers if needed for future 'isExplored' logic
 
 // part 'country_service.g.dart'; // Not needed if not using @riverpod for all
 
 // Enum for filtering
-enum CountryFilterType { all, toCook, explored }
+enum CountryFilterType {
+  all,
+  explored, // Cooked at least one meal from
+  toCook    // No meals cooked from yet
+}
 
-// StreamProvider for live countries data from Firestore
+// Provider for the stream of countries from the repository
 final countriesStreamProvider = StreamProvider<List<Country>>((ref) {
   final countryRepository = ref.watch(countryRepositoryProvider);
-  return countryRepository.watchCountries();
+  return countryRepository.getCountriesStream(); // Renamed from watchCountries
 });
+
+// Provider for the current filter type
+final countryFilterTypeProvider = StateProvider<CountryFilterType>((ref) => CountryFilterType.all);
 
 // Provider for the search query
 final countrySearchQueryProvider = StateProvider<String>((ref) => '');
@@ -40,26 +48,49 @@ final uniqueContinentsProvider = Provider<List<String>>((ref) {
 
 // Filtered countries provider (operates on data from countriesStreamProvider)
 final filteredCountriesProvider = Provider<List<Country>>((ref) {
-  final countriesData = ref.watch(countriesStreamProvider);
+  final countries = ref.watch(countriesStreamProvider).value ?? [];
+  final filterType = ref.watch(countryFilterTypeProvider);
   final searchQuery = ref.watch(countrySearchQueryProvider).toLowerCase();
-  final filterType = ref.watch(countryFilterProvider);
-  final continent = ref.watch(selectedContinentProvider);
 
-  return countriesData.when(
-    data: (countries) {
-      return countries.where((country) {
-        final matchesSearchQuery = country.name.toLowerCase().contains(searchQuery);
-        // Use the getter `isExplored` from the Country model
-        final matchesFilterType = filterType == CountryFilterType.all ||
-            (filterType == CountryFilterType.explored && country.isExplored) ||
-            (filterType == CountryFilterType.toCook && !country.isExplored);
-        final matchesContinent = continent == null || country.continent == continent;
-        return matchesSearchQuery && matchesFilterType && matchesContinent;
-      }).toList();
-    },
-    loading: () => [],
-    error: (_, __) => [],
-  );
+  // Apply search query first
+  List<Country> searchResults = countries;
+  if (searchQuery.isNotEmpty) {
+    searchResults = countries.where((country) {
+      return country.name.toLowerCase().contains(searchQuery) ||
+             country.continent.toLowerCase().contains(searchQuery);
+    }).toList();
+  }
+
+  // TODO: Re-implement 'isExplored' logic based on the top-level 'meals' collection.
+  // This will likely involve fetching meals and checking their countryId.
+  // For now, this filtering is disabled to allow compilation.
+  /*
+  // Apply filter type
+  if (filterType == CountryFilterType.all) {
+    return searchResults;
+  } else {
+    return searchResults.where((country) {
+      // Placeholder for isExplored logic - this needs to be re-implemented
+      // bool isExplored = country.isExplored; // This getter no longer exists
+      // For now, let's assume a way to get this. This will be part of the next step.
+      // This logic below is commented out as 'isExplored' is removed from Country model.
+      // return (filterType == CountryFilterType.explored && isExplored) ||
+      //        (filterType == CountryFilterType.toCook && !isExplored);
+      return true; // Temporarily return all to avoid breaking, needs proper logic
+    }).toList();
+  }
+  */
+  return searchResults; // Return search results directly until filter is re-implemented
+});
+
+// Simple provider to get a country by its ID (example, if needed elsewhere)
+final countryByIdProvider = Provider.family<Country?, String>((ref, id) {
+  final countries = ref.watch(countriesStreamProvider).value ?? [];
+  try {
+    return countries.firstWhere((country) => country.id == id);
+  } catch (e) {
+    return null; // Not found
+  }
 });
 
 // We are no longer using @riverpod for these specific providers, so the .g.dart part is not strictly necessary

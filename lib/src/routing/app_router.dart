@@ -5,18 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:omnom/src/features/auth/application/auth_service.dart';
 import 'package:omnom/src/features/auth/presentation/login_screen.dart';
 import 'package:omnom/src/features/countries/presentation/countries_screen.dart';
-import 'package:omnom/src/features/countries/presentation/country_detail_screen.dart';
+import 'package:omnom/src/features/countries/presentation/country_meals_screen.dart';
 import 'package:omnom/src/features/dishes/presentation/log_meal_screen.dart';
 import 'package:omnom/src/features/home/presentation/home_screen.dart';
 import 'package:omnom/src/routing/scaffold_with_nav_bar.dart';
+import 'package:omnom/src/features/meals/presentation/meal_detail_screen.dart';
 
 // Placeholder screens for other tabs
-// class HomeScreen extends StatelessWidget { // Removed placeholder
-//   const HomeScreen({super.key});
-//   @override
-//   Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Home')));
-// }
-
 class ScrapbookScreen extends StatelessWidget {
   const ScrapbookScreen({super.key});
   @override
@@ -29,80 +24,118 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Profile')));
 }
 
+// Define your route paths as constants
+class AppRoutes {
+  // static const String home = '/'; // This was the placeholder home
+  static const String login = '/login';
+  static const String actualHome = '/home'; // Assuming this is your actual home screen in ShellRoute
+  static const String countries = '/countries';
+  static const String countryMeals = ':countryId/meals'; // Path for list of meals in a country
+  static const String countryDetail = ':countryId'; // Changed from :countryName to :countryId for consistency
+  static const String logMeal = ':countryId/log-meal';
+  static const String mealDetail = ':countryId/meals/:mealId'; // New path for specific meal detail
+}
+
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
-// final _loginNavigatorKey = GlobalKey<NavigatorState>(); // Not strictly needed if LoginScreen doesn't host sub-navigation
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final authStateAsync = ref.watch(authStateChangesProvider);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/countries', // Default, redirect handles auth
-    // Use authStateAsync.stream for GoRouterRefreshStream if it's an AsyncNotifier
-    // If authStateChangesProvider is a direct StreamProvider, its stream is accessible.
-    // Forcing dynamic for broader compatibility, ensure your stream emits on auth changes.
+    initialLocation: AppRoutes.login, // Start at login, redirect will handle auth
+    debugLogDiagnostics: true, // Helpful for debugging routes
     refreshListenable: GoRouterRefreshStream(ref.watch(authStateChangesProvider.stream) as Stream<dynamic>),
 
     redirect: (BuildContext context, GoRouterState state) {
       final bool loggedIn = authStateAsync.valueOrNull != null;
-      final bool loggingIn = state.matchedLocation == '/login';
+      final bool loggingIn = state.matchedLocation == AppRoutes.login;
 
       if (!loggedIn && !loggingIn) {
-        return '/login';
+        return AppRoutes.login;
       }
       if (loggedIn && loggingIn) {
-        return '/countries';
+        // If logged in and on the login page, redirect to a default screen e.g., countries or actualHome
+        return AppRoutes.countries; 
       }
+      // If the user is logged in and tries to go to '/', and '/' is not a defined route anymore,
+      // they might get a not found error unless '/' is part of the shell or another route.
+      // If '/' was only the sample page, it's fine that it's gone.
+      // If they hit '/', and are logged in, but '/' isn't defined they will see the errorBuilder.
+      // Consider if you need a default route for '/' if a logged-in user lands there somehow.
+      // For now, relying on specific paths like /home, /countries etc.
       return null;
     },
 
     routes: [
+      // Removed the GoRoute for the placeholder home ('/')
       GoRoute(
-        path: '/login',
-        // No specific navigatorKey needed for a simple screen unless it manages its own stack.
+        path: '${AppRoutes.countries}/${AppRoutes.mealDetail}', // Full path: /countries/:countryId/meals/:mealId
+        parentNavigatorKey: _rootNavigatorKey, 
+        builder: (context, state) {
+          final countryId = state.pathParameters['countryId'];
+          final mealId = state.pathParameters['mealId'];
+          if (countryId == null || mealId == null) {
+            return const Scaffold(
+              body: Center(child: Text('Error: Country ID or Meal ID is missing')),
+            );
+          }
+          return MealDetailScreen(countryId: countryId, mealId: mealId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.login,
         pageBuilder: (context, state) => const NoTransitionPage(
           child: LoginScreen(),
         ),
       ),
       ShellRoute(
-        // Removed navigatorKey from ShellRoute as it might be deprecated or not needed here
         builder: (context, state, child) {
           return ScaffoldWithNavBar(child: child);
         },
         routes: [
           GoRoute(
-            path: '/home',
+            path: AppRoutes.actualHome, // Changed from '/home' to use constant
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: HomeScreen(),
+              child: HomeScreen(), // Your actual HomeScreen
             ),
           ),
           GoRoute(
-            path: '/countries',
+            path: AppRoutes.countries, // Changed from '/countries' to use constant
             pageBuilder: (context, state) => const NoTransitionPage(
               child: CountriesScreen(),
             ),
             routes: [
               GoRoute(
-                path: ':countryName',
-                parentNavigatorKey: _rootNavigatorKey,
+                path: AppRoutes.countryMeals, // e.g., /countries/countryXYZ123/meals
+                parentNavigatorKey: _rootNavigatorKey, // Show on top of the shell
                 pageBuilder: (context, state) {
-                  final countryName = state.pathParameters['countryName']!;
+                  final countryId = state.pathParameters['countryId']!;
                   return MaterialPage(
-                      child: CountryDetailScreen(countryName: countryName));
+                    child: CountryMealsScreen(countryId: countryId),
+                  );
                 },
-                routes: [
-                  GoRoute(
-                    path: 'log-meal',
-                    parentNavigatorKey: _rootNavigatorKey,
-                    pageBuilder: (context, state) {
-                      final countryName = state.pathParameters['countryName']!;
-                      return MaterialPage(
-                        child: LogMealScreen(countryName: countryName),
-                      );
-                    },
-                  ),
-                ],
               ),
+              GoRoute(
+                path: AppRoutes.logMeal, // e.g., /countries/countryXYZ123/log-meal
+                parentNavigatorKey: _rootNavigatorKey, // Show on top of the shell
+                pageBuilder: (context, state) {
+                  final countryId = state.pathParameters['countryId']!;
+                  return MaterialPage(
+                    child: LogMealScreen(countryId: countryId),
+                  );
+                },
+              ),
+              // The old countryDetail route can be added here too if needed, using :countryId
+              // GoRoute(
+              //   path: AppRoutes.countryDetail, // e.g. /countries/countryID
+              //   parentNavigatorKey: _rootNavigatorKey,
+              //   pageBuilder: (context, state) {
+              //     final countryId = state.pathParameters['countryId']!;
+              //      // return MaterialPage(child: CountryDetailScreen(countryId: countryId)); // If you have this screen adapting to countryId
+              //      return MaterialPage(child: Text('Detail for country $countryId')); // Placeholder
+              //   }
+              // ),
             ],
           ),
           GoRoute(
@@ -120,14 +153,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
     ],
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('Page Not Found')),
+      body: Center(
+        child: Text('Oops! The page at ${state.uri} was not found.\nError: ${state.error?.message}'),
+      ),
+    ),
   );
 });
 
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
-    notifyListeners(); // Initial notification
+    notifyListeners();
     _subscription = stream.asBroadcastStream().listen((_) {
-      notifyListeners(); // Notify on every stream event
+      notifyListeners();
     });
   }
 

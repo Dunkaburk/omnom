@@ -102,7 +102,7 @@ class CountriesScreen extends ConsumerWidget {
                     return CountryListItem(
                       country: country,
                       onTap: () {
-                        context.go('/countries/${country.name}');
+                        context.go('/countries/${country.id}/meals');
                       },
                     );
                   },
